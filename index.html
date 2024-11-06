@@ -13,19 +13,25 @@
 
       <div id="mainView">
         <div class="button-container">
-          <button class="btn btn-primary" onclick="showAddFolderDialog()">Buscar</button>
-          <button class="btn btn-danger" onclick="showAddFolderDialog()">Agregar</button>
+          <!-- Corregidos los botones de la ventana principal -->
+          <button class="btn btn-primary camera-btn" onclick="startScanner()">Buscar</button>
+          <button class="btn btn-danger" onclick="startScanner()">Agregar</button>
         </div>
-        <div id="qrGrid" class="qr-grid"></div>
+        <div id="qrGrid" class="qr-grid">
+          <!-- Las carpetas se mostrarán aquí -->
+        </div>
       </div>
 
       <div id="folderView" class="hidden">
         <div class="button-container">
+          <!-- Corregidos los botones de la vista de carpeta -->
           <button class="btn btn-primary" onclick="startScanner()">Buscar</button>
           <button class="btn btn-danger" onclick="startScanner()">Agregar</button>
         </div>
         <div class="qr-container">
-          <div id="qrDisplay" class="qr-display"></div>
+          <div id="qrDisplay" class="qr-display">
+            <!-- Los códigos QR se mostrarán aquí -->
+          </div>
         </div>
         <div class="button-container">
           <button class="btn btn-primary" onclick="backToMain()">Volver</button>
@@ -36,13 +42,16 @@
         <div class="scanner-header">
           <h2>Escaneando...</h2>
         </div>
-        <div id="reader"></div>
+        <div id="reader">
+          <!-- El escáner QR aparecerá aquí -->
+        </div>
         <div class="button-container">
           <button class="btn btn-danger" onclick="stopScanner()">Cancelar</button>
         </div>
       </div>
     </div>
 
+    <!-- Scripts necesarios -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="script.js"></script>

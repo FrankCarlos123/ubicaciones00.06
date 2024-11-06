@@ -1,17 +1,91 @@
+let folders = {};
+let currentFolder = null;
+let rotationInterval = null;
+let scanner = null;
+let scannerMode = 'add'; // 'add' o 'createFolder'
+
+// Inicializar la aplicación
+document.addEventListener('DOMContentLoaded', function() {
+    loadData();
+    renderFolders();
+});
+
+// Gestión de datos
+function loadData() {
+    const savedData = localStorage.getItem('folders');
+    if (savedData) {
+        folders = JSON.parse(savedData);
+    }
+}
+
+function saveData() {
+    localStorage.setItem('folders', JSON.stringify(folders));
+}
+
+// Renderizado de carpetas
+function renderFolders() {
+    const grid = document.getElementById('qrGrid');
+    grid.innerHTML = '';
+    
+    Object.keys(folders).forEach(folderId => {
+        const div = document.createElement('div');
+        div.className = 'qr-item';
+        div.onclick = () => openFolder(folderId);
+        
+        // Agregar botón de eliminar
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.innerHTML = '×';
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            if(confirm('¿Estás seguro de que deseas eliminar esta carpeta?')) {
+                deleteFolder(folderId);
+            }
+        };
+        
+        const qrDiv = document.createElement('div');
+        new QRCode(qrDiv, {
+            text: folderId,
+            width: 128,
+            height: 128
+        });
+        
+        const label = document.createElement('div');
+        label.className = 'qr-label';
+        label.textContent = folderId;
+        
+        div.appendChild(deleteBtn);
+        div.appendChild(qrDiv);
+        div.appendChild(label);
+        grid.appendChild(div);
+    });
+}
+
+function deleteFolder(folderId) {
+    delete folders[folderId];
+    saveData();
+    renderFolders();
+}
+
+function openFolder(folderId) {
+    currentFolder = folderId;
+    document.getElementById('mainView').classList.add('hidden');
+    document.getElementById('folderView').classList.remove('hidden');
+    document.getElementById('viewTitle').textContent = 'Ventana dentro de carpeta';
+    startRotation();
+}
+
 async function searchProductImage(code) {
     try {
-        // Primero intentamos buscar en Google
         const searchUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.google.com/search?q=${code}&tbm=isch`)}`;
         
         const response = await fetch(searchUrl);
         const html = await response.text();
         
-        // Buscar URLs de imágenes en el HTML
         const imgRegex = /"(https?:\/\/[^"]+\.(?:jpg|jpeg|png))"/gi;
         const matches = [...html.matchAll(imgRegex)];
         
         if (matches.length > 0) {
-            // Filtrar URLs que parecen ser de productos
             const validUrls = matches
                 .map(match => match[1])
                 .filter(url => !url.includes('gstatic') && !url.includes('google'));
@@ -28,6 +102,22 @@ async function searchProductImage(code) {
         console.error('Error en la búsqueda de imagen:', error);
         throw error;
     }
+}
+
+function startScanner() {
+    document.getElementById('scannerView').classList.remove('hidden');
+    
+    if (scanner) {
+        stopScanner();
+    }
+    
+    scanner = new Html5QrcodeScanner("reader", {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0
+    });
+    
+    scanner.render(handleScanSuccess, handleScanError);
 }
 
 async function handleScanSuccess(decodedText) {
@@ -76,6 +166,28 @@ async function handleScanSuccess(decodedText) {
         }
     }
     stopScanner();
+}
+
+function handleScanError(error) {
+    if (error?.name === 'NotAllowedError') {
+        alert('No se pudo acceder a la cámara. Por favor, permite el acceso.');
+        stopScanner();
+    }
+}
+
+function stopScanner() {
+    if (scanner) {
+        scanner.clear().catch(error => {
+            console.error('Error al detener el scanner:', error);
+        }).finally(() => {
+            scanner = null;
+            document.getElementById('scannerView').classList.add('hidden');
+            scannerMode = 'add';
+        });
+    } else {
+        document.getElementById('scannerView').classList.add('hidden');
+        scannerMode = 'add';
+    }
 }
 
 function startRotation() {
@@ -133,7 +245,6 @@ function startRotation() {
             const itemContainer = document.createElement('div');
             itemContainer.className = 'item-container';
             
-            // Primero agregamos la imagen si existe
             if (item.imageUrl) {
                 const productImage = document.createElement('img');
                 productImage.className = 'product-image';
@@ -145,14 +256,11 @@ function startRotation() {
                 itemContainer.appendChild(productImage);
             }
             
-            // Luego agregamos el QR
-            const qrDiv = document.createElement('div');
-            new QRCode(qrDiv, {
+            new QRCode(itemContainer, {
                 text: itemCode,
                 width: 256,
                 height: 256
             });
-            itemContainer.appendChild(qrDiv);
             
             const label = document.createElement('div');
             label.className = 'qr-label';
@@ -166,3 +274,24 @@ function startRotation() {
     showNext();
     rotationInterval = setInterval(showNext, 3000);
 }
+
+function stopRotation() {
+    if (rotationInterval) {
+        clearInterval(rotationInterval);
+        rotationInterval = null;
+    }
+}
+
+function backToMain() {
+    currentFolder = null;
+    stopRotation();
+    document.getElementById('folderView').classList.add('hidden');
+    document.getElementById('mainView').classList.remove('hidden');
+    document.getElementById('viewTitle').textContent = 'Ventana Principal';
+}
+
+// Event Listeners
+window.addEventListener('beforeunload', () => {
+    stopRotation();
+    stopScanner();
+});
